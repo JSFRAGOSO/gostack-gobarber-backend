@@ -10,7 +10,6 @@ class SessionController {
         if (!user) {
             return res.status(401).json({ error: 'User does not exist' });
         }
-
         if (!(await user.checkPassword(password))) {
             return res.status(401).json({ error: 'Password does not match' });
         }
