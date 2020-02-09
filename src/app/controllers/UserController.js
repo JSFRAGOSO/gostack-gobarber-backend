@@ -1,7 +1,24 @@
+import * as Yup from 'yup';
 import User from '../models/User';
 
 class UserController {
     async store(req, res) {
+        const schema = Yup.object().shape({
+            name: Yup.string().required(),
+            email: Yup.string()
+                .email()
+                .required(),
+            password: Yup.string()
+                .min(6)
+                .required(),
+        });
+
+        if (!(await schema.isValid(req.body))) {
+            return res
+                .status(400)
+                .json({ error: 'Something is wrong with request' });
+        }
+
         const userExists = await User.findOne({
             where: { email: req.body.email },
         });
@@ -16,8 +33,28 @@ class UserController {
     }
 
     async update(req, res) {
-        const user = await User.findByPk(req.userId);
+        const schema = Yup.object().shape({
+            name: Yup.string(),
+            email: Yup.string().email(),
+            oldPassword: Yup.string(),
+            password: Yup.string()
+                .min(6)
+                .when('oldPassword', (oldPassword, field) =>
+                    oldPassword ? field.required() : field
+                ),
+            confirmPassword: Yup.string().when('password', (password, field) =>
+                password ? field.required().oneOf([Yup.ref('password')]) : field
+            ),
+        });
+
+        if (!(await schema.isValid(req.body))) {
+            return res
+                .status(400)
+                .json({ error: 'Something is wrong with request' });
+        }
+
         const { email, oldPassword } = req.body;
+        const user = await User.findByPk(req.userId);
 
         if (email && user.email !== email) {
             const userExists = await User.findOne({
